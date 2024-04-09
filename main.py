@@ -227,7 +227,7 @@ if st.session_state['password_verification'] == True:
     #     pass
 
     # Showing results if generated
-    if st.session_state['processing'] == False:
+    if st.session_state['generated_exist'] == True:
         # Showing results of the summary
         with st.expander("See the Summary"):
             st.write(rf"""{st.session_state['summary']}""")
