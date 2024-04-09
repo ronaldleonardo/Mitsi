@@ -1,3 +1,6 @@
+import io
+from markdown_pdf import Section
+from markdown_pdf import MarkdownPdf
 from dotenv import load_dotenv
 import os
 import streamlit as st
@@ -10,7 +13,7 @@ from st_keyup import st_keyup
 
 # Page config
 PAGE_CONFIG = {"page_title": "Mitsi - Make It Simple",
-               "page_icon": ":pushpin:"}
+               "page_icon": ":hatching_chick:"}
 st.set_page_config(**PAGE_CONFIG)
 
 # Hide streamlit style
@@ -30,7 +33,12 @@ load_dotenv()
 def chat_gpt(prompt):
     response = client.chat.completions.create(
         model=st.session_state['openai_model'],
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        max_tokens=4096,
+        top_p=0.8,
+        frequency_penalty=0,
+        presence_penalty=0,
     )
     return response.choices[0].message.content.strip()
 
@@ -39,9 +47,9 @@ def chat_gpt2(prompt):
     response2 = client.chat.completions.create(
         model=st.session_state['openai_model'],
         messages=[{"role": "user", "content": prompt}],
-        temperature=1,
+        temperature=0.7,
         max_tokens=4096,
-        top_p=1,
+        top_p=0.8,
         frequency_penalty=0,
         presence_penalty=0
     )
@@ -73,7 +81,7 @@ def main_process():
                     Turn the Title into Heading Markdown
                     Your task is to extract relevant information from a text on the page of a research paper and rephrase it into {st.session_state['language_pref']}. This information will be used to create a research paper summary.
                     Extract relevant information from the following text, which is delimited with triple backticks.\
-                    Do not write '{st.session_state['language_pref']} Research Paper Summary'.
+                    Do not write Research Paper Summary or something along the line.
                     Be sure to use Markdown to help organize the summary into heading, subheading, bullet points, etc.
 
                     Text: ```{text[i]}```
@@ -90,7 +98,7 @@ def main_process():
                     This is {i+1}/{len(text)} page of research paper.
                     Your task is to extract relevant information from a text on the page of a research paper and rephrase it into {st.session_state['language_pref']}. This information will be used to create a research paper summary.
                     Extract relevant information from the following text, which is delimited with triple backticks.\
-                    Do not write '{st.session_state['language_pref']} Research Paper Summary'.
+                    Do not write Research Paper Summary or something along the line.
                     Be sure to use Markdown to help organize the summary into heading, subheading, bullet points, etc.
 
                     Text: ```{text[i]}```
@@ -166,7 +174,7 @@ client = OpenAI(api_key=API_KEY)
 st.title("Make It Simple :hatching_chick:")
 st.write("Turn research paper into easy to read documents")
 
-# Janky password
+# Password Verification
 if st.session_state['password_verification'] == False:
     password = st.text_input("Enter a password", type="password")
     if password == "keretakuda":
@@ -220,33 +228,58 @@ if st.session_state['password_verification'] == True:
         st.session_state['processing'] = False
         st.rerun()
 
-    # elif st.session_state['in_progress'] == True:
-    #     a = st.warning("In Progress")
-    #     time.sleep(2)
-    #     a = None
-    #     pass
-
     # Showing results if generated
     if st.session_state['generated_exist'] == True:
-        # Showing results of the summary
-        with st.expander("See the Summary"):
-            st.write(rf"""{st.session_state['summary']}""")
-
-        # Download summary txt
-        st.download_button(
-            label="Download Summary MD",
-            data=st.session_state['summary'],
-            file_name='summary.md',
-            mime='text/csv',
-        )
         # Showing results of the simplified version
         with st.expander("See the Simplified Version"):
             st.write(rf"""{st.session_state['simplified']}""")
 
-        # Download simplified txt
+        # # Download simplified md
+        # st.download_button(
+        #     label="Download Simplified MD",
+        #     data=st.session_state['simplified'],
+        #     file_name='simplified.md',
+        #     mime='text/csv',
+        # )
+
+        # Download Simplified PDF
+        simplified_pdf = MarkdownPdf(toc_level=2)
+        simplified_pdf.add_section(
+            Section(f"{st.session_state['simplified']}", toc=False))
+        simplified_output_buffer = io.BytesIO()
+        simplified_pdf.save(simplified_output_buffer)
+        simplified_pdf_bytes = simplified_output_buffer.getvalue()
+
         st.download_button(
-            label="Download Simplified MD",
-            data=st.session_state['simplified'],
-            file_name='simplified.md',
-            mime='text/csv',
+            label="Download Simplified PDF",
+            data=simplified_pdf_bytes,
+            file_name=f"mitsi_simplified_{uploaded_file.name}.pdf",
+            mime='application/pdf',
+        )
+
+        # Showing results of the summary
+        with st.expander("See Detailed Summary"):
+            st.write(rf"""{st.session_state['summary']}""")
+
+        # # Download summary md
+        # st.download_button(
+        #     label="Download Summary MD",
+        #     data=st.session_state['summary'],
+        #     file_name='summary.md',
+        #     mime='text/csv',
+        # )
+
+        # Download Summary PDF
+        summary_pdf = MarkdownPdf(toc_level=2)
+        summary_pdf.add_section(
+            Section(f"{st.session_state['summary']}", toc=False))
+        summary_output_buffer = io.BytesIO()
+        summary_pdf.save(summary_output_buffer)
+        summary_pdf_bytes = summary_output_buffer.getvalue()
+
+        st.download_button(
+            label="Download Summary PDF",
+            data=summary_pdf_bytes,
+            file_name=f"mitsi_summary_{uploaded_file.name}.pdf",
+            mime='application/pdf',
         )
