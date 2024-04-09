@@ -9,8 +9,20 @@ import streamlit as st
 from st_keyup import st_keyup
 
 # Page config
-PAGE_CONFIG = {"page_title": "Misti", "page_icon": ":pushpin:"}
+PAGE_CONFIG = {"page_title": "Mitsi - Make It Simple",
+               "page_icon": ":pushpin:"}
 st.set_page_config(**PAGE_CONFIG)
+
+# Hide streamlit style
+hide_st_style = """
+                <style>
+                #MainMenu {visibility:hidden;}
+                footer {visibility: hidden;}
+                header {visibility: hidden;}
+                </style>
+                """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 
 load_dotenv()
 
