@@ -1,7 +1,8 @@
 streamlit==1.33
-PyPDF2==3.0.1
+pypdf
 defusedxml==0.7.1
 python-dotenv==1.0.1
 openai==1.16.2
 streamlit-keyup==0.2.4
 markdown_pdf==1.1
+pypdf==4.2.0

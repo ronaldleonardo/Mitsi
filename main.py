@@ -5,7 +5,9 @@ from dotenv import load_dotenv
 import os
 import streamlit as st
 from openai import OpenAI
-import PyPDF2
+# import PyPDF2
+import pypdf
+from pypdf import PdfReader
 import pandas as pd
 import time
 import streamlit as st
@@ -61,8 +63,12 @@ def main_process():
         st.session_state['generated_exist'] = False
         #### Reading entire PDF files ####
         # creating a pdf reader object
+        pdfReader = PdfReader(uploaded_file)
         text = []
-        pdfReader = PyPDF2.PdfReader(uploaded_file)
+        
+        # [OLD]Fail when pdf has any kind of encryption
+        ## pdfReader = PyPDF2.PdfReader(uploaded_file)
+
         st.session_state['summary'] = ' '
         # Storing the pages in a list
         for i in range(0, len(pdfReader.pages)):
@@ -78,6 +84,7 @@ def main_process():
             if i == 0:
                 prompt = f"""
                     Extract a single TITLE of research paper from the text and use that as the title of summary.
+                    Translate the title to fit into {st.session_state['language_pref']} language (ignore if it's already in the same language).
                     Turn the Title into Heading Markdown
                     Your task is to extract relevant information from a text on the page of a research paper and rephrase it into {st.session_state['language_pref']}. This information will be used to create a research paper summary.
                     Extract relevant information from the following text, which is delimited with triple backticks.\
@@ -110,13 +117,7 @@ def main_process():
                 # st.markdown(response)
                 st.session_state['summary'] = st.session_state['summary'] + \
                     ' ' + response + '\n\n'
-            # You can query the model only 3 times in a minute for free, so we need to put some delay
-            # time.sleep(19)
-
-        # # Showing results of the summary
-        # with st.expander("See the Summary"):
-        #     st.write(rf"""{st.session_state['summary']}""")
-
+                
         #### Generating Simplified Version ####
         st.session_state['simplified'] = ' '
         prompt_simplify = f"""
@@ -139,8 +140,9 @@ def main_process():
         # You can query the model only 3 times in a minute for free, so we need to put some delay
         # time.sleep(19)
 
-        st.success('Task Complete')
-        st.session_state['generated_exist'] = True
+    st.success('Task Complete')
+    st.session_state['generated_exist'] = True
+    st.balloons()
 
 
 # Session state
@@ -164,6 +166,7 @@ if "language_pref" not in st.session_state:
 
 if "processing" not in st.session_state:
     st.session_state['processing'] = False
+
 
 # OpenAI API
 API_KEY = os.environ['OPENAI_API_KEY']
@@ -195,7 +198,8 @@ if st.session_state['password_verification'] == True:
     # Reasearch Paper Uploader
     uploaded_file = st.file_uploader(
         "Upload a PDF file for analysis", type=['PDF'])
-
+    
+    # Language selection
     language = st.selectbox("Choose a Language:",
                             ("English", "Indonesia", "Others"))
     if language == "English":
@@ -229,8 +233,12 @@ if st.session_state['password_verification'] == True:
         st.session_state['processing'] = False
         st.rerun()
 
+    
     # Showing results if generated
     if st.session_state['generated_exist'] == True:
+        # spacer
+        st.markdown(f"#")
+        st.markdown(f"#")
         # Showing results of the simplified version
         with st.expander("See the Simplified Version"):
             st.write(rf"""{st.session_state['simplified']}""")
