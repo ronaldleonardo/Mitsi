@@ -213,6 +213,7 @@ if st.session_state['password_verification'] == True:
             if st.button("Generate :memo:"):
                 if uploaded_file is not None:
                     st.session_state['processing'] = True
+                    st.session_state['generated_exist'] = False
                     st.rerun()
 
                 else:
