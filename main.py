@@ -5,9 +5,6 @@ from openai import OpenAI
 import PyPDF2
 import pandas as pd
 import time
-import shutil
-import subprocess
-import sys
 
 load_dotenv()
 
@@ -142,11 +139,6 @@ if st.button("Generate"):
         st.warning("Please upload a Journal.")
         st.session_state['generated_exist'] = False
 
-
-# st.session_state['summary'] = st.session_state['summary']
-# st.session_state['simplified'] = st.session_state['summary']
-
-
 if st.session_state['generated_exist'] == True:
 
     # Showing results of the summary
@@ -160,20 +152,6 @@ if st.session_state['generated_exist'] == True:
         file_name='summary.txt',
         mime='text/csv',
     )
-
-    st.download_button(
-        label="Download Summary TXT",
-        data=st.session_state['summary'],
-        file_name='summary.txt',
-        mime='text/csv',
-    )
-    # st.download_button(
-    #     label="Download Summary PDF",
-    #     data=st.session_state['summary'],
-    #     file_name='summary.pdf',
-    #     mime='application/octet-stream',
-    # )
-
     # Showing results of the simplified version
     with st.expander("See the Simplified Version"):
         st.write(rf"""{st.session_state['simplified']}""")
@@ -185,31 +163,3 @@ if st.session_state['generated_exist'] == True:
         file_name='simplified.txt',
         mime='text/csv',
     )
-
-    # st.download_button(
-    #     label="Download Simplified PDF",
-    #     data=st.session_state['simplified'],
-    #     file_name='simplified.pdf',
-    #     mime='application/octet-stream',
-    # )
-
-# Reasearch Paper Uploader
-uploaded_file2 = st.file_uploader(
-    "Upload a PDF file for analysis", type=['TXT'])
-
-if st.button("hello"):
-    if uploaded_file2 is not None:
-        model_bytes = uploaded_file2.read()
-
-    st.write(model_bytes)
-
-    from markdown_pdf import MarkdownPdf
-    from markdown_pdf import Section
-
-
-    pdf = MarkdownPdf(toc_level=2)
-
-    pdf.add_section(Section(f"{model_bytes}", toc=False))
-    data=pdf.save("guide.pdf")
-
-  
