@@ -13,6 +13,8 @@ import time
 import streamlit as st
 from st_keyup import st_keyup
 
+load_dotenv()
+
 # Page config
 PAGE_CONFIG = {"page_title": "Mitsi - Make It Simple",
                "page_icon": ":hatching_chick:"}
@@ -29,7 +31,19 @@ hide_st_style = """
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
 
-load_dotenv()
+# # OpenAI API
+API_KEY = os.environ['OPENAI_API_KEY']
+client = OpenAI(api_key=API_KEY)
+
+# # TogetherAI API
+# API_KEY = os.environ['TOGETHER_API_KEY']
+# BASE_URL = os.environ['TOGETHER_BASE_URL']
+# client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+
+# # Anyscale API
+# API_KEY = os.environ['ANYSCALE_API_KEY']
+# BASE_URL = os.environ['ANYSCALE_BASE_URL']
+# client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
 
 def chat_gpt(prompt):
@@ -63,11 +77,11 @@ def main_process():
         st.session_state['generated_exist'] = False
         #### Reading entire PDF files ####
         # creating a pdf reader object
-        pdfReader = PdfReader(uploaded_file)
+        pdfReader = PdfReader(st.session_state['uploaded_file'])
         text = []
-        
+
         # [OLD]Fail when pdf has any kind of encryption
-        ## pdfReader = PyPDF2.PdfReader(uploaded_file)
+        # pdfReader = PyPDF2.PdfReader(st.session_state['uploaded_file'])
 
         st.session_state['summary'] = ' '
         # Storing the pages in a list
@@ -86,7 +100,7 @@ def main_process():
                     Extract a single TITLE of research paper from the text and use that as the title of summary.
                     Translate the title to fit into {st.session_state['language_pref']} language (ignore if it's already in the same language).
                     Turn the Title into Heading Markdown
-                    Your task is to extract relevant information from a text on the page of a research paper and rephrase it into {st.session_state['language_pref']}. This information will be used to create a research paper summary.
+                    Your task is to extract relevant information from a text on the page of a research paper and rephrase it into {st.session_state['language_pref']} {st.session_state['understanding_level']}. This information will be used to create a research paper summary.
                     Extract relevant information from the following text, which is delimited with triple backticks.\
                     Do not write Research Paper Summary or something along the line.
                     Be sure to use Markdown to help organize the summary into heading, subheading, bullet points, etc.
@@ -102,8 +116,8 @@ def main_process():
                     ' ' + response + '\n\n'
             if i != 0:
                 prompt = f"""
-                    This is {i+1}/{len(text)} page of research paper.
-                    Your task is to extract relevant information from a text on the page of a research paper and rephrase it into {st.session_state['language_pref']}. This information will be used to create a research paper summary.
+                    This is {i+1}/{len(text)} page of research paper. 
+                    Your task is to extract relevant information from a text on the page of a research paper and rephrase it into {st.session_state['language_pref']} {st.session_state['understanding_level']}. This information will be used to create a research paper summary.
                     Extract relevant information from the following text, which is delimited with triple backticks.\
                     Do not write Research Paper Summary or something along the line.
                     Be sure to use Markdown to help organize the summary into heading, subheading, bullet points, etc.
@@ -117,12 +131,12 @@ def main_process():
                 # st.markdown(response)
                 st.session_state['summary'] = st.session_state['summary'] + \
                     ' ' + response + '\n\n'
-                
+
         #### Generating Simplified Version ####
         st.session_state['simplified'] = ' '
         prompt_simplify = f"""
                 You are a professional journalist that's very good at explaining science and medical stuff in simple way that everyone can read and enjoy like an article.
-                Use {st.session_state['language_pref']}.
+                Use {st.session_state['language_pref']}. {st.session_state['understanding_level']}.
                 Turn this text below into an article that everyone can understand easily whilst keeping as much science details as possible.
                 Use markup and Heading to help. Avoid making statements that may be untrue and not based on this text.
                 Extract relevant information from the following text.
@@ -140,14 +154,28 @@ def main_process():
         # You can query the model only 3 times in a minute for free, so we need to put some delay
         # time.sleep(19)
 
-    st.success('Task Complete')
-    st.session_state['generated_exist'] = True
-    st.balloons()
+        st.session_state['generated_exist'] = True
 
 
 # Session state
 if "openai_model" not in st.session_state:
     st.session_state['openai_model'] = 'gpt-3.5-turbo'
+    # st.session_state['openai_model'] = "mistralai/Mixtral-8x7B-Instruct-v0.1" # If using other than GPT
+
+if "password_verification" not in st.session_state:
+    st.session_state['password_verification'] = False
+
+if "uploaded_file" not in st.session_state:
+    st.session_state['uploaded_file'] = None
+
+if "difficulty_level" not in st.session_state:
+    st.session_state['difficulty_level'] = "Default"
+
+if "understanding_level" not in st.session_state:
+    st.session_state['understanding_level'] = ''
+
+if "language_pref" not in st.session_state:
+    st.session_state['language_pref'] = "English"
 
 if "summary" not in st.session_state:
     st.session_state['summary'] = ' '
@@ -158,19 +186,8 @@ if "simplified" not in st.session_state:
 if "generated_exist" not in st.session_state:
     st.session_state['generated_exist'] = False
 
-if "password_verification" not in st.session_state:
-    st.session_state['password_verification'] = False
-
-if "language_pref" not in st.session_state:
-    st.session_state['language_pref'] = "English"
-
 if "processing" not in st.session_state:
     st.session_state['processing'] = False
-
-
-# OpenAI API
-API_KEY = os.environ['OPENAI_API_KEY']
-client = OpenAI(api_key=API_KEY)
 
 
 # Main
@@ -196,26 +213,39 @@ if st.session_state['password_verification'] == False:
 
 if st.session_state['password_verification'] == True:
     # Reasearch Paper Uploader
-    uploaded_file = st.file_uploader(
+    st.session_state['uploaded_file'] = st.file_uploader(
         "Upload a PDF file for analysis", type=['PDF'])
-    
-    # Language selection
-    language = st.selectbox("Choose a Language:",
-                            ("English", "Indonesia", "Others"))
-    if language == "English":
-        st.session_state['language_pref'] = "English"
-    if language == "Indonesia":
-        st.session_state['language_pref'] = "Bahasa Indonesia"
-    if language == "Others":
-        language_other = st_keyup("Enter the language", key="0")
-        st.session_state['language_pref'] = language_other
-    st.write(f"You've selected: {st.session_state['language_pref']}")
+
+    # Column layout
+    # col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        # Language selection
+        language = st.selectbox("Choose a language:",
+                                ("English", "Indonesia", "Others"))
+        if language == "English":
+            st.session_state['language_pref'] = "English"
+        if language == "Indonesia":
+            st.session_state['language_pref'] = "Bahasa Indonesia"
+        if language == "Others":
+            language_other = st_keyup("Enter the language", key="0")
+            st.session_state['language_pref'] = language_other
+        st.write(f"You've selected: {st.session_state['language_pref']}")
+
+    with col2:
+        # Language difficulty
+        st.session_state['difficulty_level'] = st.selectbox("Language difficulty: ",
+                                                            ("Default", "Easier"))
+        if st.session_state['difficulty_level'] == "Easier":
+            st.session_state['understanding_level'] = "Please write it so that a 5 years old can understand"
+        else:
+            st.session_state['understanding_level'] = ""
 
     # Button disabled after Generate Summary
     with st.empty():
         if st.session_state['processing'] == False:
             if st.button("Generate :memo:"):
-                if uploaded_file is not None:
+                if st.session_state['uploaded_file'] is not None:
                     st.session_state['processing'] = True
                     st.session_state['generated_exist'] = False
                     st.rerun()
@@ -233,11 +263,9 @@ if st.session_state['password_verification'] == True:
         st.session_state['processing'] = False
         st.rerun()
 
-    
     # Showing results if generated
     if st.session_state['generated_exist'] == True:
         # spacer
-        st.markdown(f"#")
         st.markdown(f"#")
         # Showing results of the simplified version
         with st.expander("See the Simplified Version"):
@@ -262,7 +290,7 @@ if st.session_state['password_verification'] == True:
         st.download_button(
             label="Download Simplified PDF",
             data=simplified_pdf_bytes,
-            file_name=f"mitsi_simplified_{uploaded_file.name}.pdf",
+            file_name=f"mitsi_simplified_{st.session_state['uploaded_file'].name}.pdf",
             mime='application/pdf',
         )
 
@@ -289,6 +317,11 @@ if st.session_state['password_verification'] == True:
         st.download_button(
             label="Download Summary PDF",
             data=summary_pdf_bytes,
-            file_name=f"mitsi_summary_{uploaded_file.name}.pdf",
+            file_name=f"mitsi_summary_{st.session_state['uploaded_file'].name}.pdf",
             mime='application/pdf',
         )
+
+with st.empty():
+    if st.session_state['generated_exist'] == True:
+        st.markdown(f"#")
+        st.success('Task Complete 🐥')
