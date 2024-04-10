@@ -320,8 +320,3 @@ if st.session_state['password_verification'] == True:
             file_name=f"mitsi_summary_{st.session_state['uploaded_file'].name}.pdf",
             mime='application/pdf',
         )
-
-with st.empty():
-    if st.session_state['generated_exist'] == True:
-        st.markdown(f"#")
-        st.success('Task Complete 🐥')
